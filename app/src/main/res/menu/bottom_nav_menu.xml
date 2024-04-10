@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:title="@string/menu_home"
+        android:id="@+id/home"
+        android:icon="@drawable/baseline_home_24"
+        />
+    <item android:title="@string/menu_transactions"
+        android:id="@+id/transactions"
+        android:icon="@drawable/baseline_monetization_on_24"
+        />
+    <item android:title="@string/menu_transactions_history"
+        android:id="@+id/transactionsHistory"
+        android:icon="@drawable/baseline_access_time_filled_24"
+        />
+    <item android:title="@string/menu_profile"
+        android:id="@+id/profile"
+        android:icon="@drawable/baseline_person_24"
+        />
+</menu>

@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Casino Client</string>
+    <string name="dummy_string">Dummy</string>
+    <string name="menu_home">Дом</string>
+    <string name="menu_transactions">Переводы</string>
+    <string name="menu_profile">Профиль</string>
+    <string name="menu_transactions_history">История</string>
+    <string name="i_already_have_account"><u>У меня уже есть аккаунт</u></string>
+    <string name="invalid_balance">Поле баланса не должно быть пустым</string>
+    <string name="invalid_money_amount">Сумма должна быть больше нуля!</string>
+    <string name="invalid_name">Имя должно содержать не менее 1 символа</string>
+    <string name="error_not_enough_money">На счету недостаточно средств!</string>
+    <string name="missing_player_with_id">Игрока с таким ID не существует!</string>
+    <string name="error_id_not_filled">ID должно быть заполнено!</string>
+    <string name="error_pass_not_filled">Пароль должен быть заполнен!</string>
+    <string name="error_invalid_prompt">Недопустимое значение!</string>
+    <string name="error_incorrect_prompt">Пароль неверный!</string>
+</resources>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="@color/white"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    tools:context=".ui.LoginActivity">
+
+    <TextView
+        android:id="@+id/welcomeTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="30dp"
+        android:gravity="center"
+        android:text="@string/dummy_string"
+        android:textColor="@color/black"
+        android:textSize="24sp" />
+
+
+    <EditText
+        android:id="@+id/passView"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:ems="10"
+        android:textAlignment="center"
+        android:maxLength="4"
+        android:maxLines="1"
+        android:hint="Ваш пароль"
+        android:textColorHint="@color/theme_gray_2"
+        android:textColor="@color/black"
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginBottom="40dp"
+        android:inputType="number|numberDecimal" />
+
+    <Button
+        android:id="@+id/submit_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:background="@drawable/button_shape"
+        android:text="Войти"
+        android:textSize="20dp"
+        android:textColor="@color/white"
+        android:onClick="onClick"/>
+
+
+</LinearLayout>
