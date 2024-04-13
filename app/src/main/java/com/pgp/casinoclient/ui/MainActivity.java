@@ -2,35 +2,17 @@ package com.pgp.casinoclient.ui;
 
 import static androidx.fragment.app.FragmentTransaction.TRANSIT_FRAGMENT_FADE;
 
+import android.os.Bundle;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.net.nsd.NsdServiceInfo;
-import android.net.wifi.p2p.WifiP2pManager;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.util.Log;
-
 import com.pgp.casinoclient.R;
 import com.pgp.casinoclient.databinding.ActivityMainBinding;
-import com.pgp.casinoclient.loaders.DataLoader;
-import com.pgp.casinoclient.net.NsdHelper;
-import com.pgp.casinoclient.net.PackageType;
-import com.pgp.casinoclient.net.Request;
-import com.pgp.casinoclient.net.RequestType;
 import com.pgp.casinoclient.net.Transport;
-import com.pgp.casinoclient.net.TransportLayer;
-import com.pgp.casinoclient.net.packages.Package;
-import com.pgp.casinoclient.net.packages.PlayerPackage;
-
-import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 

@@ -4,6 +4,7 @@ import static android.content.Context.WIFI_SERVICE;
 
 import android.net.wifi.WifiManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -15,8 +16,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -63,6 +66,7 @@ public class Transport {
         mAddress = address;
     }
 
+    @Nullable
     public static Transport getTransport(AppCompatActivity activity){
         byte[] address = getHotspotIPAddress(activity);
         if (address != null){
@@ -125,8 +129,9 @@ public class Transport {
             Request callback = new Request(null, null);
 
             try{
-                InetAddress serverAddr = InetAddress.getByAddress(mAddress);
-                mSocket = new Socket(serverAddr, mPort);
+                InetSocketAddress serverAddr = new InetSocketAddress(InetAddress.getByAddress(mAddress), mPort);
+                mSocket = new Socket();
+                mSocket.connect(serverAddr, 2000);
                 mOut = mSocket.getOutputStream();
                 mIn = mSocket.getInputStream();
 
@@ -137,14 +142,17 @@ public class Transport {
 
                 if (mIn != null){
                     int available = mIn.available();
-                    while(available < 4){
+                    while(available < 3){
                         available = mIn.available();
                     }
 
-                    callback = new Request(mIn, available);
+                    callback = new Request(mIn);
                 }
             }catch(Exception ex){
                 Log.e(TAG, ex.toString());
+                if (ex.getClass() == SocketTimeoutException.class){
+                    Log.w(TAG, "Server connect timeout exception");
+                }
             }
 
             destroy();

@@ -15,21 +15,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.pgp.casinoclient.R;
+import com.pgp.casinoclient.core.Player;
 import com.pgp.casinoclient.loaders.CacheReadingResult;
 import com.pgp.casinoclient.loaders.DataLoader;
+import com.pgp.casinoclient.net.PackageConverter;
 import com.pgp.casinoclient.net.PackageType;
 import com.pgp.casinoclient.net.Request;
 import com.pgp.casinoclient.net.RequestHeader;
 import com.pgp.casinoclient.net.RequestHeaderValues;
 import com.pgp.casinoclient.net.Transport;
-import com.pgp.casinoclient.net.TransportLayer;
-import com.pgp.casinoclient.utils.event.Event;
-import com.pgp.casinoclient.utils.event.eventArgs.EventArgs;
-import com.pgp.casinoclient.utils.event.eventArgs.PayloadReceivedEventArgs;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class LoadingActivity extends AppCompatActivity {
 
@@ -106,7 +102,6 @@ public class LoadingActivity extends AppCompatActivity {
                 break;
             }
         }
-
 
 
         // Читаем кэш, если он существует

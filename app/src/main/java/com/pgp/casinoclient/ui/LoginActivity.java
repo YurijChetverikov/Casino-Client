@@ -1,14 +1,7 @@
 package com.pgp.casinoclient.ui;
 
-import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.net.DhcpInfo;
-import android.net.nsd.NsdServiceInfo;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -16,28 +9,20 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.pgp.casinoclient.R;
 import com.pgp.casinoclient.core.Player;
-import com.pgp.casinoclient.loaders.CacheReadingResult;
 import com.pgp.casinoclient.loaders.DataLoader;
-import com.pgp.casinoclient.net.NsdHelper;
+import com.pgp.casinoclient.net.PackageConverter;
 import com.pgp.casinoclient.net.PackageType;
 import com.pgp.casinoclient.net.Request;
+import com.pgp.casinoclient.net.RequestErrorCode;
 import com.pgp.casinoclient.net.RequestHeader;
 import com.pgp.casinoclient.net.RequestHeaderValues;
-import com.pgp.casinoclient.net.RequestType;
 import com.pgp.casinoclient.net.Transport;
-import com.pgp.casinoclient.net.TransportLayer;
-import com.pgp.casinoclient.net.packages.PlayerPackage;
-import com.pgp.casinoclient.utils.BinaryUtils;
 
 import java.io.IOException;
-import java.math.BigInteger;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Calendar;
 
 public class LoginActivity extends AppCompatActivity {
@@ -89,40 +74,39 @@ public class LoginActivity extends AppCompatActivity {
 
                     if (pass > 0){
                         passView.setError(null);
-                        Request r = new Request(RequestHeader.createHeader(PackageType.PASSWORD), null);
-                        r.getHeader().Values.put(RequestHeaderValues.PLAYER_ID, DataLoader.Singleton().CurrentPlayer.ID);
-                        r.getHeader().Values.put(RequestHeaderValues.PLAYER_PASSWORD, pass);
-                        Request callback = Transport.getTransport(activity).sendRequest(r);
 
-                        if (callback.isSuccess()){
-                            if ((boolean)callback.getPackage().parseResult() == true){
-                                if (DataLoader.Singleton().CurrentPlayer.Password != pass){
-                                    // Делаем запрос на сервер, чтобы получить всего игрока, так как пароли не совпадают
+                        Request getPlayer = new Request(RequestHeader.Sample(PackageType.PLAYER_FULL), null);
 
-                                    Request r2 = new Request(RequestHeader.createHeader(PackageType.PLAYER_FULL), null);
-                                    r2.getHeader().Values.put(RequestHeaderValues.PLAYER_ID, DataLoader.Singleton().CurrentPlayer.ID);
-                                    r2.getHeader().Values.put(RequestHeaderValues.PLAYER_PASSWORD, pass);
-                                    Request callback2 = Transport.getTransport(activity).sendRequest(r2);
+                        getPlayer.getHeader().Values.put(RequestHeaderValues.PLAYER_ID, DataLoader.Singleton().CurrentPlayer.ID);
+                        getPlayer.getHeader().Values.put(RequestHeaderValues.PLAYER_PASSWORD, pass);
 
-                                    if (callback2.isSuccess()){
-                                        DataLoader.Singleton().CurrentPlayer = (Player) callback2.getPackage().parseResult();
-                                        try {
-                                            DataLoader.Singleton().WriteTableCache(activity);
-                                        } catch (IOException e) {
-                                            Log.e(TAG, e.toString());
-                                        }
-                                    }else{
-                                        passView.setError(getString(R.string.error_incorrect_prompt));
-                                    }
-                                }
-                                startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                            }else{
-                                passView.setError(getString(R.string.error_incorrect_prompt));
+                        Request callback = Transport.getTransport(activity).sendRequest(getPlayer);
+
+                        if (callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE) == RequestErrorCode.GOOD){
+                            Player pl = (Player) PackageConverter.tryToConvert(callback);
+
+                            DataLoader.Singleton().CurrentPlayer = pl;
+                            try {
+                                DataLoader.Singleton().WriteTableCache(activity);
+                            }catch (IOException e) {
+                                Log.e(TAG, e.toString());
                             }
-                        }else{
-                            serverConnectionError();
+
                             startActivity(new Intent(getApplicationContext(), MainActivity.class));
+
+                            Log.i(TAG, "DONE.");
+                        }else{
+                            if (callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE) == RequestErrorCode.DATA_NOT_FOUND$PLAYER_WITH_ID){
+                                // Игрок с таким id не найден
+                            }else if (callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE) == RequestErrorCode.DATA_NOT_FOUND$PLAYER_WITH_PASSWORD){
+                                // Игрок с таким id имеет другой пароль!
+                                Toast.makeText(activity, "Пароль не верный!", Toast.LENGTH_SHORT).show();
+                            }else{
+                                serverConnectionError();
+                                startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                            }
                         }
+
                     }else{
                         passView.setError(getString(R.string.error_invalid_prompt));
                     }

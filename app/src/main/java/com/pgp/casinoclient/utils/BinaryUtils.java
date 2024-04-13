@@ -29,7 +29,8 @@ public class BinaryUtils {
         return new String(b.toByteArray(), StandardCharsets.UTF_8);
     }
 
-    public static String ReadString(@NonNull ByteBuffer stream) throws IOException {
+    @NonNull
+    public static String ReadString(@NonNull ByteBuffer stream) {
         ByteArrayOutputStream b = new ByteArrayOutputStream();
 
         int in = stream.get();

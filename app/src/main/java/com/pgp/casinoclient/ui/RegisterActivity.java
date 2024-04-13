@@ -1,8 +1,6 @@
 package com.pgp.casinoclient.ui;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -11,17 +9,8 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.pgp.casinoclient.R;
-import com.pgp.casinoclient.core.Player;
-import com.pgp.casinoclient.loaders.CacheReadingResult;
-import com.pgp.casinoclient.loaders.DataLoader;
-import com.pgp.casinoclient.net.PackageType;
-import com.pgp.casinoclient.net.Request;
-import com.pgp.casinoclient.net.RequestHeader;
-import com.pgp.casinoclient.net.RequestHeaderValues;
 import com.pgp.casinoclient.net.Transport;
-import com.pgp.casinoclient.net.packages.PlayerPackage;
 
-import java.io.IOException;
 
 public class RegisterActivity extends AppCompatActivity {
 
@@ -82,36 +71,36 @@ public class RegisterActivity extends AppCompatActivity {
 
 
     public void tryToGetData(){
-        PlayerPackage pak = new PlayerPackage(id, pass);
-        RequestHeader h = RequestHeader.createHeader(PackageType.PLAYER_FULL);
-        h.Values.put(RequestHeaderValues.PLAYER_ID, id);
-        h.Values.put(RequestHeaderValues.PLAYER_PASSWORD, pass);
-        Request r = new Request(h, null);
-
-        Request res = transport.sendRequest(r);
-
-        if (res != null){
-            if (res.isSuccess()){
-                if (res.getPackage() != null){
-                    Player pl = (Player) res.getPackage().parseResult();
-
-                    DataLoader.Singleton().CurrentPlayer = pl;
-                    try {
-                        DataLoader.Singleton().WriteTableCache(this);
-                    } catch (IOException e) {
-                        Log.e(TAG, e.toString());
-                    }
-                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
-
-                }else{
-                    serverConnectionError();
-                }
-            }else{
-                serverConnectionError();
-            }
-        }else{
-            serverConnectionError();
-        }
+//        PlayerPackage pak = new PlayerPackage(id, pass);
+//        RequestHeader h = RequestHeader.createHeader(PackageType.PLAYER_FULL);
+//        h.Values.put(RequestHeaderValues.PLAYER_ID, id);
+//        h.Values.put(RequestHeaderValues.PLAYER_PASSWORD, pass);
+//        Request r = new Request(h, null);
+//
+//        Request res = transport.sendRequest(r);
+//
+//        if (res != null){
+//            if (res.isSuccess()){
+//                if (res.getPackage() != null){
+//                    Player pl = (Player) res.getPackage().parseResult();
+//
+//                    DataLoader.Singleton().CurrentPlayer = pl;
+//                    try {
+//                        DataLoader.Singleton().WriteTableCache(this);
+//                    } catch (IOException e) {
+//                        Log.e(TAG, e.toString());
+//                    }
+//                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
+//
+//                }else{
+//                    serverConnectionError();
+//                }
+//            }else{
+//                serverConnectionError();
+//            }
+//        }else{
+//            serverConnectionError();
+//        }
 
     }
 
