@@ -15,4 +15,5 @@
     <string name="error_pass_not_filled">Пароль должен быть заполнен!</string>
     <string name="error_invalid_prompt">Недопустимое значение!</string>
     <string name="error_incorrect_prompt">Пароль неверный!</string>
+    <string name="error_server_connection">Нет соединения с сервером!</string>
 </resources>

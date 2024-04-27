@@ -1,6 +1,8 @@
 package com.pgp.casinoclient.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -9,7 +11,17 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.pgp.casinoclient.R;
+import com.pgp.casinoclient.core.Player;
+import com.pgp.casinoclient.loaders.DataLoader;
+import com.pgp.casinoclient.net.PackageConverter;
+import com.pgp.casinoclient.net.PackageType;
+import com.pgp.casinoclient.net.Request;
+import com.pgp.casinoclient.net.RequestErrorCode;
+import com.pgp.casinoclient.net.RequestHeader;
+import com.pgp.casinoclient.net.RequestHeaderValues;
 import com.pgp.casinoclient.net.Transport;
+
+import java.io.IOException;
 
 
 public class RegisterActivity extends AppCompatActivity {
@@ -32,7 +44,9 @@ public class RegisterActivity extends AppCompatActivity {
         setContentView(R.layout.activity_register);
 
         idView = findViewById(R.id.id_edit);
+        idView.setTransformationMethod(null);
         passView = findViewById(R.id.passView);
+        passView.setTransformationMethod(null);
         loginButton = findViewById(R.id.submit_button);
 
         transport = Transport.getTransport(this);
@@ -51,8 +65,9 @@ public class RegisterActivity extends AppCompatActivity {
                             if (pass > 0){
                                 passView.setError(null);
 
+                                loginButton.setEnabled(false);
                                 tryToGetData();
-
+                                loginButton.setEnabled(true);
                             }else{
                                 passView.setError(getString(R.string.error_invalid_prompt));
                             }
@@ -71,36 +86,52 @@ public class RegisterActivity extends AppCompatActivity {
 
 
     public void tryToGetData(){
-//        PlayerPackage pak = new PlayerPackage(id, pass);
-//        RequestHeader h = RequestHeader.createHeader(PackageType.PLAYER_FULL);
-//        h.Values.put(RequestHeaderValues.PLAYER_ID, id);
-//        h.Values.put(RequestHeaderValues.PLAYER_PASSWORD, pass);
-//        Request r = new Request(h, null);
-//
-//        Request res = transport.sendRequest(r);
-//
-//        if (res != null){
-//            if (res.isSuccess()){
-//                if (res.getPackage() != null){
-//                    Player pl = (Player) res.getPackage().parseResult();
-//
-//                    DataLoader.Singleton().CurrentPlayer = pl;
-//                    try {
-//                        DataLoader.Singleton().WriteTableCache(this);
-//                    } catch (IOException e) {
-//                        Log.e(TAG, e.toString());
-//                    }
-//                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
-//
-//                }else{
-//                    serverConnectionError();
-//                }
-//            }else{
-//                serverConnectionError();
-//            }
-//        }else{
-//            serverConnectionError();
-//        }
+        Request getPlayer = new Request(RequestHeader.Sample(PackageType.PLAYER_FULL), null);
+
+        getPlayer.getHeader().Values.put(RequestHeaderValues.PLAYER_ID, id);
+        getPlayer.getHeader().Values.put(RequestHeaderValues.PLAYER_PASSWORD, pass);
+
+        Request callback = Transport.getTransport(this).sendRequest(getPlayer);
+
+        if (callback == null) {serverConnectionError(); return;}
+
+        if (callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE) == RequestErrorCode.GOOD){
+            Player pl = (Player) PackageConverter.tryToConvert(callback.getPackage(), PackageType.PLAYER_FULL, this);
+
+            DataLoader.Singleton().CurrentPlayer = pl;
+
+            Request getCasName = new Request(RequestHeader.Sample(PackageType.CASINO_NAME), null);
+
+            callback = Transport.getTransport(this).sendRequest(getCasName);
+
+            if (callback != null){
+                if (callback.isSuccess()){
+                    String name = (String) PackageConverter.tryToConvert(callback.getPackage(), PackageType.CASINO_NAME, this);
+                    if (name != null){
+                        DataLoader.Singleton().CasinoName = name;
+                    }
+                }
+            }
+
+            try {
+                DataLoader.Singleton().WriteTableCache(this);
+            }catch (IOException e) {
+                Log.e(TAG, e.toString());
+            }
+
+            startActivity(new Intent(getApplicationContext(), MainActivity.class));
+        }else{
+            if (callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE) == RequestErrorCode.DATA_NOT_FOUND$PLAYER_WITH_ID){
+                // Игрок с таким id не найден
+                idView.setError("Игрок с таким ID не найден!");
+            }else if (callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE) == RequestErrorCode.DATA_NOT_FOUND$PLAYER_WITH_PASSWORD){
+                // Игрок с таким id имеет другой пароль!
+                passView.setError("Пароль неверный!");
+            }else{
+                serverConnectionError();
+                //startActivity(new Intent(getApplicationContext(), MainActivity.class));
+            }
+        }
 
     }
 

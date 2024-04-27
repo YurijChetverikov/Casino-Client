@@ -33,7 +33,7 @@
         android:textColorHint="@color/theme_gray_2"
         android:layout_marginHorizontal="10dp"
         android:layout_marginBottom="20dp"
-        android:inputType="number|numberDecimal" />
+        android:inputType="numberPassword" />
 
     <EditText
         android:id="@+id/passView"
@@ -48,7 +48,7 @@
         android:textColor="@color/black"
         android:layout_marginHorizontal="10dp"
         android:layout_marginBottom="40dp"
-        android:inputType="number|numberDecimal" />
+        android:inputType="numberPassword" />
 
     <Button
         android:id="@+id/submit_button"

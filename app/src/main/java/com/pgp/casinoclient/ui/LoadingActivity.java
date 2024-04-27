@@ -90,7 +90,7 @@ public class LoadingActivity extends AppCompatActivity {
             //                                          int[] grantResults)
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
-            return;
+            //return;
         }
         List<WifiConfiguration> list = wifiManager.getConfiguredNetworks();
         for( WifiConfiguration i : list ) {
@@ -121,8 +121,6 @@ public class LoadingActivity extends AppCompatActivity {
                 //startActivity(new Intent(getApplicationContext(), RegisterActivity.class));
             }
         } catch (Exception e) {
-            DataLoader.Singleton().Players.clear();
-
             Log.e(TAG, "пизда\n" + e.toString());
         }
     }

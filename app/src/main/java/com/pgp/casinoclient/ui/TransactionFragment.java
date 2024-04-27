@@ -16,16 +16,27 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.pgp.casinoclient.R;
+import com.pgp.casinoclient.core.Game;
 import com.pgp.casinoclient.core.Player;
 import com.pgp.casinoclient.core.Transaction;
 import com.pgp.casinoclient.core.TransactionType;
 import com.pgp.casinoclient.loaders.DataLoader;
+import com.pgp.casinoclient.net.PackageConverter;
+import com.pgp.casinoclient.net.PackageType;
+import com.pgp.casinoclient.net.Request;
+import com.pgp.casinoclient.net.RequestErrorCode;
+import com.pgp.casinoclient.net.RequestHeader;
+import com.pgp.casinoclient.net.RequestHeaderValues;
+import com.pgp.casinoclient.net.Transport;
 import com.pgp.casinoclient.ui.animations.framgentchange.TransitionButton;
+import com.pgp.casinoclient.utils.BinaryUtils;
+import com.pgp.casinoclient.utils.Logger;
 
 import java.io.IOException;
 
@@ -44,18 +55,25 @@ public class TransactionFragment extends Fragment {
     private Player receiver;
 
     private View parentView;
+    private AppCompatActivity activity;
     private ArrayAdapter<String> adapter = null;
 
 
     private int totalAmount = 0;
     private int amount = 0;
 
+    private static String TAG = "TransactionFramgent";
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
 
     }
+
+    public TransactionFragment(AppCompatActivity activity){
+        this.activity = activity;
+    }
+
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
@@ -65,19 +83,36 @@ public class TransactionFragment extends Fragment {
 
         button = parentView.findViewById(R.id.confirmButton);
         receiverIdView = parentView.findViewById(R.id.receiver_id);
+        receiverIdView.setTransformationMethod(null);
         receiverNameView = parentView.findViewById(R.id.receiver_name);
         amountView = parentView.findViewById(R.id.amount);
+        amountView.setTransformationMethod(null);
         typeView = parentView.findViewById(R.id.transactionType);
         descView = parentView.findViewById(R.id.desc);
         comissionView = parentView.findViewById(R.id.transactionCommission);
         totalAmountView = parentView.findViewById(R.id.totalAmount);
 
 
+        // Обоновляем комиссию
+        Request get = null;
+        get = new Request(RequestHeader.Sample(PackageType.TRANSACTION_COMISSION), null);
+
+        Request callback = Transport.getTransport(activity).sendRequest(get);
+
+        if (callback != null){
+            if (callback.isSuccess()){
+                DataLoader.Singleton().TransactionComission = callback.getPackage()[0];
+            }
+        }else{
+            Toast.makeText(parentView.getContext(), getString(R.string.error_server_connection), Toast.LENGTH_SHORT).show();
+        }
+
+
 
         comissionView.setText("Комиссия " +  Byte.toString(DataLoader.Singleton().TransactionComission) + "%");
 
         adapter = new ArrayAdapter(parentView.getContext(),
-                R.layout.simple_spinner_layout, TransactionType.GetNames());
+                R.layout.simple_spinner_layout, TransactionType.getNamesForClient());
 
         adapter.setDropDownViewResource(R.layout.simple_spinner_layout);
         typeView.setAdapter(adapter);
@@ -96,17 +131,60 @@ public class TransactionFragment extends Fragment {
                 t.Amount = totalAmount;
                 t.SenderPaid = amount;
 
-                int transId = DataLoader.Singleton().getNextTransactionID();
 
-                DataLoader.Singleton().Transactions.put(transId, t);
-                DataLoader.Singleton().CurrentPlayer.Transactions.add(DataLoader.Singleton().Transactions.get(transId));
-                receiver.Transactions.add(DataLoader.Singleton().Transactions.get(transId));
-//                try {
-//                    //DataLoader.Singleton().WriteBigDataCache(parentView.getContext());
-//                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-//                }
-                Toast.makeText(parentView.getContext(), "Транзакция выполнена!", Toast.LENGTH_SHORT).show();
+
+                try {
+                    Request get = null;
+                    get = new Request(RequestHeader.Sample(PackageType.TRANSACTION_REQUEST), t.getByteArray());
+                    get.getHeader().Values.put(RequestHeaderValues.PLAYER_ID, DataLoader.Singleton().CurrentPlayer.ID);
+                    get.getHeader().Values.put(RequestHeaderValues.PLAYER_PASSWORD, DataLoader.Singleton().CurrentPlayer.Password);
+
+                    Request callback = Transport.getTransport(activity).sendRequest(get);
+
+                    if (callback != null){
+//                        if (callback.isSuccess()){
+//                            if (callback.getPackage().length > 1){
+//                                Game[] arr = (Game[]) PackageConverter.tryToConvert(callback.getPackage(), PackageType.GAMES);
+//                                if (arr.length > 0){
+//                                    DataLoader.Singleton().Games.clear();
+//                                    for (Game g : arr){
+//                                        DataLoader.Singleton().Games.add(g);
+//                                    }
+//                                }
+//                            }
+//                        }
+                        switch ((RequestErrorCode)callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE)){
+                            case GOOD:
+                                Toast.makeText(parentView.getContext(), "Транзакция выполнена!", Toast.LENGTH_SHORT).show();
+                                DataLoader.Singleton().CurrentPlayer.Balance -= t.SenderPaid;
+                                DataLoader.Singleton().CurrentPlayer.Transactions.add(t);
+                                DataLoader.Singleton().WriteTransactionsCahce(getContext());
+                                break;
+                            case REQUEST_DENIED$NOT_ENOUGH_FUNDS:
+                                Toast.makeText(parentView.getContext(), "Недостаточно средств!", Toast.LENGTH_SHORT).show();
+                                break;
+                            case DATA_NOT_FOUND$PLAYER_WITH_ID:
+                                Toast.makeText(parentView.getContext(), "Игрока с введённым ID не существует!", Toast.LENGTH_SHORT).show();
+                                break;
+                            default:
+                                Toast.makeText(parentView.getContext(), "Произошла ошибка!", Toast.LENGTH_SHORT).show();
+                                break;
+                        }
+                    }
+                } catch (IOException e) {
+                    Logger.LogError(TAG, e);
+                }
+
+
+
+
+
+//                int transId = DataLoader.Singleton().getNextTransactionID();
+
+//                DataLoader.Singleton().Transactions.put(transId, t);
+//                DataLoader.Singleton().CurrentPlayer.Transactions.add(DataLoader.Singleton().Transactions.get(transId));
+//                receiver.Transactions.add(DataLoader.Singleton().Transactions.get(transId));
+
             }
         });
 
@@ -167,8 +245,44 @@ public class TransactionFragment extends Fragment {
 
 
     private void onFieldUpdate(){
+        if (receiverIdView.getText().toString().isEmpty()){
+            return;
+        }
         int id = Integer.parseInt(receiverIdView.getText().toString());
-        Player founded = DataLoader.Singleton().GetPlayerById(id);
+        if (id == DataLoader.Singleton().CurrentPlayer.ID) {
+            receiver = null;
+            receiverNameView.setText("");
+            receiverIdView.setError(getString(R.string.error_invalid_prompt));
+            button.setEnabled(false);
+            return;
+        }
+        Player founded = DataLoader.Singleton().GetCachedPlayerById(id);
+        if (founded == null){
+            // Спрашиваем у сервера, знает ли он человека с таким ID
+            Request get = null;
+            get = new Request(RequestHeader.Sample(PackageType.PLAYER), null);
+            get.getHeader().Values.put(RequestHeaderValues.PLAYER_ID, id);
+
+            Request callback = Transport.getTransport(activity).sendRequest(get);
+
+            if (callback != null){
+                if (callback.isSuccess()){
+                    String playerName = (String)PackageConverter.tryToConvert(callback.getPackage(), PackageType.PLAYER, activity);
+                    if (playerName != null){
+                        Player newPl = new Player(id, playerName);
+                        DataLoader.Singleton().CachedPlayers.add(newPl);
+                        try {
+                            DataLoader.Singleton().WriteTableCache(activity.getApplicationContext());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        founded = DataLoader.Singleton().GetCachedPlayerById(id);
+
+                    }
+                }
+            }
+        }
+
         if (founded != null){
             if (!founded.IsCasino){
                 receiver = founded;

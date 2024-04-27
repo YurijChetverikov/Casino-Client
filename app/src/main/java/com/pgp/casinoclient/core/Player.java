@@ -18,6 +18,7 @@ public class Player {
     public boolean IsCasino = false;
     public ArrayList<Transaction> Transactions = new ArrayList<Transaction>(0);
     public ArrayList<GameSession> GameSessions = new ArrayList<GameSession>(0);
+    
 
     public GameSession CurrentSession = null;
     public GameDataBlock CurrentDataBlock = null;

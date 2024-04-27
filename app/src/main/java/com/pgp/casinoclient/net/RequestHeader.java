@@ -9,6 +9,7 @@ import com.pgp.casinoclient.utils.PositionInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,49 +50,48 @@ public class RequestHeader {
     }
 
     @Nullable
-    public static RequestHeader /*Map.Entry<RequestHeader, Integer>*/ parse(@NonNull PositionInputStream input/*, int available*/) throws IOException {
-        if (input.available() >= 3){
-            RequestHeader header = new RequestHeader();
-            byte valuesCount = (byte)input.read();
+    public static RequestHeader /*Map.Entry<RequestHeader, Integer>*/ parse(@NonNull ByteBuffer input/*, int available*/) throws IOException {
+        RequestHeader header = new RequestHeader();
+        byte valuesCount = input.get();
+        //available--;
+        for (byte i = 0; i < valuesCount; i++){
+            byte pairType = input.get();
             //available--;
-            for (byte i = 0; i < valuesCount; i++){
-                byte pairType = (byte)input.read();
-                //available--;
 
-                RequestHeaderValues key = RequestHeaderValues.get(pairType);
+            RequestHeaderValues key = RequestHeaderValues.get(pairType);
 
-                switch (key){
-                    case INVALID:
-                        header.Values.put(key, null);
-                        break;
-                    case REQUEST_TYPE:
-                        header.Values.put(key, RequestType.get((byte)input.read()));
-                        //available--;
-                        break;
-                    case PACKAGE_TYPE:
-                        header.Values.put(key, PackageType.get((byte)input.read()));
-                        //available--;
-                        break;
-                    case PLAYER_ID:
-                        header.Values.put(key, BinaryUtils.ReadInt(input));
-                        //available-=4;
-                        break;
-                    case PLAYER_PASSWORD:
-                        header.Values.put(key, BinaryUtils.ReadInt(input));
-                        //available-=4;
-                        break;
-                    case ERROR_CODE:
-                        header.Values.put(key, RequestErrorCode.get((byte)input.read()));
-                        break;
-                }
-
+            switch (key){
+                case INVALID:
+                    header.Values.put(key, null);
+                    break;
+                case REQUEST_TYPE:
+                    header.Values.put(key, RequestType.get(input.get()));
+                    //available--;
+                    break;
+                case PACKAGE_TYPE:
+                    header.Values.put(key, PackageType.get(input.get()));
+                    //available--;
+                    break;
+                case PLAYER_ID:
+                    header.Values.put(key, input.getInt());
+                    //available-=4;
+                    break;
+                case PLAYER_PASSWORD:
+                    header.Values.put(key, input.getInt());
+                    //available-=4;
+                    break;
+                case ERROR_CODE:
+                    header.Values.put(key, RequestErrorCode.get(input.get()));
+                    break;
+                case LAST_TRANSACTIONS_HISTORY_INDEX:
+                    header.Values.put(key, input.getInt());
+                    break;
             }
 
-            //return new AbstractMap.SimpleEntry<>(header, available);
-            return header;
         }
 
-        return null;
+        return header;
+
     }
 
     public byte[] write() throws IOException{
@@ -118,6 +118,9 @@ public class RequestHeader {
                     break;
                 case ERROR_CODE:
                     out.write(((RequestErrorCode)val).ordinal());
+                    break;
+                case LAST_TRANSACTIONS_HISTORY_INDEX:
+                    out.write(BinaryUtils.Int2Bytes((int)val));
                     break;
                 default:
                     out.write(0);

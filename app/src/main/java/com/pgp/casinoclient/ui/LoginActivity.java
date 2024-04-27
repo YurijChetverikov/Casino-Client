@@ -44,6 +44,7 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.login_activity);
 
         passView = findViewById(R.id.passView);
+        passView.setTransformationMethod(null);
         loginButton = findViewById(R.id.submit_button);
         welcomeView = findViewById(R.id.welcomeTextView);
 
@@ -75,6 +76,8 @@ public class LoginActivity extends AppCompatActivity {
                     if (pass > 0){
                         passView.setError(null);
 
+                        loginButton.setEnabled(false);
+
                         Request getPlayer = new Request(RequestHeader.Sample(PackageType.PLAYER_FULL), null);
 
                         getPlayer.getHeader().Values.put(RequestHeaderValues.PLAYER_ID, DataLoader.Singleton().CurrentPlayer.ID);
@@ -82,10 +85,32 @@ public class LoginActivity extends AppCompatActivity {
 
                         Request callback = Transport.getTransport(activity).sendRequest(getPlayer);
 
-                        if (callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE) == RequestErrorCode.GOOD){
-                            Player pl = (Player) PackageConverter.tryToConvert(callback);
+                        if (callback == null) {serverConnectionError(); startActivity(new Intent(getApplicationContext(), MainActivity.class)); loginButton.setEnabled(true); return;}
 
-                            DataLoader.Singleton().CurrentPlayer = pl;
+                        if (callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE) == RequestErrorCode.GOOD){
+                            Player pl = (Player) PackageConverter.tryToConvert(callback.getPackage(), PackageType.PLAYER_FULL, activity);
+
+                            if (DataLoader.Singleton().CurrentPlayer == null){
+                                DataLoader.Singleton().CurrentPlayer = pl;
+                            }else{
+                                DataLoader.Singleton().CurrentPlayer.ID = pl.ID;
+                                DataLoader.Singleton().CurrentPlayer.Name = pl.Name;
+                                DataLoader.Singleton().CurrentPlayer.Balance = pl.Balance;
+                            }
+
+                            Request getCasName = new Request(RequestHeader.Sample(PackageType.CASINO_NAME), null);
+
+                            callback = Transport.getTransport(activity).sendRequest(getCasName);
+
+                            if (callback != null){
+                                if (callback.isSuccess()){
+                                    String name = (String) PackageConverter.tryToConvert(callback.getPackage(), PackageType.CASINO_NAME, activity);
+                                    if (name != null){
+                                        DataLoader.Singleton().CasinoName = name;
+                                    }
+                                }
+                            }
+
                             try {
                                 DataLoader.Singleton().WriteTableCache(activity);
                             }catch (IOException e) {
@@ -93,8 +118,6 @@ public class LoginActivity extends AppCompatActivity {
                             }
 
                             startActivity(new Intent(getApplicationContext(), MainActivity.class));
-
-                            Log.i(TAG, "DONE.");
                         }else{
                             if (callback.getHeader().Values.get(RequestHeaderValues.ERROR_CODE) == RequestErrorCode.DATA_NOT_FOUND$PLAYER_WITH_ID){
                                 // Игрок с таким id не найден
@@ -106,6 +129,8 @@ public class LoginActivity extends AppCompatActivity {
                                 startActivity(new Intent(getApplicationContext(), MainActivity.class));
                             }
                         }
+
+                        loginButton.setEnabled(true);
 
                     }else{
                         passView.setError(getString(R.string.error_invalid_prompt));

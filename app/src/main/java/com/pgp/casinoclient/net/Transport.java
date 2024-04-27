@@ -11,7 +11,11 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.pgp.casinoclient.net.Request;
+import com.pgp.casinoclient.utils.BinaryUtils;
+import com.pgp.casinoclient.utils.Logger;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
@@ -36,6 +40,8 @@ public class Transport {
     private byte[] mAddress;
     private Socket mSocket;
 
+
+    private byte[] transportBuff = new byte[1024];
 
 
     @NonNull
@@ -126,7 +132,7 @@ public class Transport {
         }
 
         private Request sendRequest(Request req){
-            Request callback = new Request(null, null);
+            Request callback = null;
 
             try{
                 InetSocketAddress serverAddr = new InetSocketAddress(InetAddress.getByAddress(mAddress), mPort);
@@ -137,20 +143,44 @@ public class Transport {
 
 
                 if (mOut != null){
-                    mOut.write(req.writeInArray());
+                    byte[] buff = req.writeInArray();
+                    mOut.write(BinaryUtils.Int2Bytes(buff.length));
+                    mOut.write(buff);
+                    mSocket.shutdownOutput(); // Закрываем output stream, чтобы сервер точно знал, что информации больше не будет
                 }
 
                 if (mIn != null){
-                    int available = mIn.available();
-                    while(available < 3){
-                        available = mIn.available();
+
+                    byte[] lengthBuffer = new byte[4];
+
+                    if (mIn.read(lengthBuffer) == -1){
+                        Log.w(TAG, "Error while reading data length!");
+                        return callback;
                     }
 
-                    callback = new Request(mIn);
+
+
+                    int dataLength = BinaryUtils.Bytes2Int(lengthBuffer);
+                    byte[] dataBuffer = new byte[dataLength];
+
+                    DataInputStream ds = new DataInputStream(mIn);
+                    ds.readFully(dataBuffer, 0, dataBuffer.length);
+
+//                    if (mIn.read(dataBuffer) == -1){
+//                        Log.w(TAG, "Error while reading data!");
+//                        return callback;
+//                    }
+
+                    if (dataBuffer.length >= 3){
+                        callback = Request.create(dataBuffer);
+                    }else{
+                        Log.w(TAG, "Response length less than 3 bytes!");
+                    }
                 }
             }catch(Exception ex){
                 Log.e(TAG, ex.toString());
                 if (ex.getClass() == SocketTimeoutException.class){
+                    // Эта хрень почему-то никогда не отрабатывает
                     Log.w(TAG, "Server connect timeout exception");
                 }
             }
@@ -168,7 +198,7 @@ public class Transport {
                     return sendRequest(req);
                 }
             }catch(Exception ex){
-                Log.e(TAG, ex.toString());
+                Logger.LogError(TAG, ex);
             }
             return null;
         }

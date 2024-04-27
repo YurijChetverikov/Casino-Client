@@ -34,20 +34,18 @@ public class DataLoader {
     private static DataLoader Singleton;
 
 
-    public ArrayList<Player> Players = new ArrayList<Player>();
+    public ArrayList<Player> CachedPlayers = new ArrayList<Player>();
     public Player CurrentPlayer = null;
     public ArrayList<Game> Games = new ArrayList<Game>();
-    public Map<Integer,Transaction> Transactions = new HashMap<Integer,Transaction>(0);
-    public ArrayList<Player> PlayersInGameRoom = new ArrayList<Player>();
     private Bitmap casinoBitmap = null;
     public byte[] CompressedBitmap = new byte[0];
-    public Game CurrentGame = null;
+    public String CasinoName = "";
 
     public byte TransactionComission = 0; // В процентах
 
 
 
-    final String PLAYERS_TABLE_FILENAME = "pl.bin";
+    final String PLAYERS_TABLE_FILENAME = "pl.bin"; // Таблица, где есть наш игрок и кэшированные игроки и прочие лёгкие данные (по типу названий игр)
     final String TRANSACTIONS_DATA_FILENAME = "dat1.dat";
     final String GAMEDATA_DATA_FILENAME = "dat2.dat";
     final String CASINO_IMAGE_FILENAME = "pic.dat";
@@ -66,7 +64,7 @@ public class DataLoader {
         setSavingTitle(true);
         WriteTableCache(context);
         setSavingTitle(true);
-        for (Player pl: Players){
+        for (Player pl: CachedPlayers){
             WriteDataCahce(context, pl);
             setSavingTitle(true);
         }
@@ -79,6 +77,23 @@ public class DataLoader {
         stream.write(getPlayersTable());
         stream.close();
         setSavingTitle(false);
+    }
+
+    public void WriteTransactionsCahce(@NonNull Context context) throws IOException{
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        outputStream.write(BinaryUtils.Int2Bytes(CurrentPlayer.Transactions.size()));
+        for (Transaction t: CurrentPlayer.Transactions){
+            outputStream.write((byte[])((t.Sender != null) ? (BinaryUtils.Int2Bytes(t.Sender.ID)) : (BinaryUtils.Int2Bytes(-1))));
+            outputStream.write((byte[])((t.Receiver != null) ? (BinaryUtils.Int2Bytes(t.Receiver.ID)) : (BinaryUtils.Int2Bytes(-1))));
+            outputStream.write(BinaryUtils.Int2Bytes(t.Amount));
+            outputStream.write(BinaryUtils.Int2Bytes(t.SenderPaid));
+            outputStream.write((byte)t.Type.ordinal());
+            outputStream.write(BinaryUtils.WriteString(t.Description));
+        }
+
+        FileOutputStream stream = context.openFileOutput(TRANSACTIONS_DATA_FILENAME, Context.MODE_PRIVATE);
+        stream.write(outputStream.toByteArray());
+        stream.close();
     }
 
 
@@ -166,8 +181,10 @@ public class DataLoader {
 
             int playersCount = b.getInt();
             for(int i = 0; i < playersCount; i++){
-                Players.add(new Player(b.getInt(), BinaryUtils.ReadString(b)));
+                CachedPlayers.add(new Player(b.getInt(), BinaryUtils.ReadString(b)));
             }
+
+            CasinoName = BinaryUtils.ReadString(b);
         }catch(Exception ex){
             return CacheReadingResult.READED_WITH_ERRORS;
         }
@@ -191,18 +208,17 @@ public class DataLoader {
 
                 for(int i = 0; i < transCount; i++){
                     Transaction t = new Transaction();
-                    int transID = b.getInt();
+//                    int transID = b.getInt();
                     int senderId = b.getInt();
                     int receiverId = b.getInt();
-                    t.Sender = GetPlayerById(senderId);
-                    t.Receiver = GetPlayerById(receiverId);
+                    t.Sender = getPlayerById(senderId);
+                    t.Receiver = getPlayerById(receiverId);
                     t.Amount = b.getInt();
                     t.SenderPaid = b.getInt();
                     t.Type = TransactionType.Get((int)b.get());
                     t.Description = BinaryUtils.ReadString(b);
-                    Transactions.put(transID, t);
-                    GetPlayerById(senderId).Transactions.add(Transactions.get(transID));
-                    GetPlayerById(receiverId).Transactions.add(Transactions.get(transID));
+//                    Transactions.put(transID, t);
+                    CurrentPlayer.Transactions.add(t);
                 }
             }catch(Exception ex){
                 return CacheReadingResult.READED_WITH_ERRORS;
@@ -312,14 +328,15 @@ public class DataLoader {
             }
 
             outputStream.write(TransactionComission);
-            outputStream.write(BinaryUtils.Int2Bytes(Players.size()));
+            outputStream.write(BinaryUtils.Int2Bytes(CachedPlayers.size()));
 
-            for (Player pl: Players) {
-                if (pl.ID != CurrentPlayer.ID){
-                    outputStream = writePlayer(pl, outputStream);
-                }
+            for (Player pl: CachedPlayers) {
+                outputStream.write(BinaryUtils.Int2Bytes(pl.ID));
+                outputStream.write(BinaryUtils.WriteString(pl.Name));
             }
         }
+
+        outputStream.write(BinaryUtils.WriteString(CasinoName));
 
         byte[] res = outputStream.toByteArray();
 
@@ -343,8 +360,8 @@ public class DataLoader {
 
 
     @Nullable
-    public Player GetPlayerById(int id){
-        for(Player pl: Players){
+    public Player GetCachedPlayerById(int id){
+        for(Player pl: CachedPlayers){
             if (pl.ID == id){
                 return pl;
             }
@@ -353,36 +370,11 @@ public class DataLoader {
         return null;
     }
 
-    public int GetNextFreeID(){
-        return Players.size();
+    public Player getPlayerById(int id){
+        if (CurrentPlayer.ID == id){return CurrentPlayer; }
+
+        return GetCachedPlayerById(id);
     }
-
-    // Если возвратит 255 => все id заняты
-    public byte GetNextFreeGameID(){
-        boolean correct = true;
-        for (byte i = 0; i < 255; i++){
-            for (Game g: Games) {
-                if (g.ID == i){
-                    correct = false;
-                    break;
-                }
-            }
-            if (correct){
-                return i;
-            }
-            correct = true;
-        }
-
-        return (byte)255;
-    }
-
-    public int getNextTransactionID(){
-        if (Transactions.keySet().size() == 0){
-            return 0;
-        }
-        return (int)Transactions.keySet().toArray()[Transactions.keySet().size() - 1];
-    }
-
 
     public Game GetGameByID(byte id){
         for(Game g: Games){
@@ -398,14 +390,9 @@ public class DataLoader {
         return casinoBitmap;
     }
 
-    public void setCasinoBitmap(@NonNull Bitmap newImage){
-        casinoBitmap = newImage.copy(newImage.getConfig(), true);
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        newImage.compress(Bitmap.CompressFormat.WEBP, 100, stream);
-        CompressedBitmap = stream.toByteArray();
-        newImage.recycle();
-
-
+    public void setCasinoBitmap(byte[] compressedBitmap){
+        this.CompressedBitmap = compressedBitmap;
+        casinoBitmap = BitmapFactory.decodeByteArray(compressedBitmap, 0, compressedBitmap.length);
     }
 
 

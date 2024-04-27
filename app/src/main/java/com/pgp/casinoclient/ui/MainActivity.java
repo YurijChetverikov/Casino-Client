@@ -2,7 +2,11 @@ package com.pgp.casinoclient.ui;
 
 import static androidx.fragment.app.FragmentTransaction.TRANSIT_FRAGMENT_FADE;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.util.Log;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -11,8 +15,18 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.pgp.casinoclient.R;
+import com.pgp.casinoclient.core.Game;
 import com.pgp.casinoclient.databinding.ActivityMainBinding;
+import com.pgp.casinoclient.loaders.DataLoader;
+import com.pgp.casinoclient.net.PackageConverter;
+import com.pgp.casinoclient.net.PackageType;
+import com.pgp.casinoclient.net.Request;
+import com.pgp.casinoclient.net.RequestHeader;
+import com.pgp.casinoclient.net.RequestHeaderValues;
 import com.pgp.casinoclient.net.Transport;
+import com.pgp.casinoclient.utils.Logger;
+
+import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -20,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private static MainActivity singleton = null;
     private ActivityMainBinding binding;
 
-
+    private final String TAG = "Main Activity";
 
     private Transport transport;
 
@@ -45,12 +59,12 @@ public class MainActivity extends AppCompatActivity {
         binding.bottomNavigationView.setOnItemSelectedListener(item -> {
 
             if (item.getItemId() == R.id.home){
-                OpenFragment(new HomeFragment());
+                OpenFragment(new HomeFragment(this));
             }else if (item.getItemId() == R.id.transactions){
-                OpenFragment(new TransactionFragment());
-            }//else if (item.getItemId() == R.id.transactionsHistory) {
-//                OpenFragment(new TransactionHistoryFragment(DataLoader.Singleton().GetCasinoPlayer()));
-//            }else if (item.getItemId() == R.id.settings){
+                OpenFragment(new TransactionFragment(this));
+            }else if (item.getItemId() == R.id.transactionsHistory) {
+                OpenFragment(new TransactionHistoryFragment(DataLoader.Singleton().CurrentPlayer, this));
+            }//else if (item.getItemId() == R.id.settings){
 //                OpenFragment(new SettingsFragment());
 //            }else if (item.getItemId() == R.id.playersList){
 //                OpenFragment(new PlayersListFragment());
@@ -59,10 +73,45 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
+        if (DataLoader.Singleton().getCasinoBitmap() == null){
+            Request getLogo = new Request(RequestHeader.Sample(PackageType.CASINO_LOGO), null);
 
-        OpenFragment(new HomeFragment());
+            Request callback = Transport.getTransport(this).sendRequest(getLogo);
 
-        transport = Transport.getTransport(this);
+            if (callback != null){
+                if (callback.isSuccess()){
+                    if (callback.getPackage().length > 100){
+                        DataLoader.Singleton().setCasinoBitmap(callback.getPackage());
+                        try {
+                            DataLoader.Singleton().WriteCasinoImageCache(this);
+                        } catch (IOException e) {
+                            Logger.LogError(TAG, e);
+                        }
+                    }
+                }
+            }
+        }
+
+        Request getGames = new Request(RequestHeader.Sample(PackageType.GAMES), null);
+
+        Request callback = Transport.getTransport(this).sendRequest(getGames);
+
+        if (callback != null){
+            if (callback.isSuccess()){
+                if (callback.getPackage().length > 1){
+                    Game[] arr = (Game[])PackageConverter.tryToConvert(callback.getPackage(), PackageType.GAMES, this);
+                    if (arr.length > 0){
+                        DataLoader.Singleton().Games.clear();
+                        for (Game g : arr){
+                            DataLoader.Singleton().Games.add(g);
+                        }
+                    }
+                }
+            }
+        }
+
+
+        OpenFragment(new HomeFragment(this));
     }
 
 

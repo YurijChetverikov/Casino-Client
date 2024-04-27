@@ -34,7 +34,7 @@
         android:textColor="@color/black"
         android:layout_marginHorizontal="10dp"
         android:layout_marginBottom="40dp"
-        android:inputType="number|numberDecimal" />
+        android:inputType="numberPassword"/>
 
     <Button
         android:id="@+id/submit_button"

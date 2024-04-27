@@ -14,32 +14,65 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Request {
 
-    private final String TAG = "Request class";
+    private static final String TAG = "Request class";
     private RequestHeader mHeader = null;
     private byte[] mPackage = null;
     private boolean mSuccess = false;
 
 
-    // Этот конструктор предназначен только для входящих данных/запросов
-    public Request(@NonNull InputStream input) throws IOException{
-        if (input.available() > 0){
+//    // Этот конструктор предназначен только для входящих данных/запросов
+//    public Request(@NonNull InputStream input) throws IOException{
+//        if (input.available() > 0){
+//            try{
+//                int available = input.available();
+//                PositionInputStream stream = new PositionInputStream(input);
+//                mHeader = RequestHeader.parse(stream);
+//                if (mHeader == null) {Log.e(TAG, "Invalid header"); return;}
+//                if (!mHeader.check(false)) {Log.e(TAG, "Invalid header"); return;}
+//
+//                mPackage = new byte[available - stream.getPosition()];
+//                stream.read(mPackage, 0, mPackage.length);
+//
+//
+//                mSuccess = true;
+//
+//
+//
+//            }catch(IOException ex){
+//                Log.e(TAG, ex.toString());
+//            }
+//        }
+//    }
+
+    private Request(){
+
+    }
+
+    @Nullable
+    public static Request create(@NonNull byte[] inp) throws IOException{
+
+        ByteBuffer input = ByteBuffer.wrap(inp);
+
+        Request res = null;
+
+        if (inp.length >= 3){
             try{
-                int available = input.available();
-                PositionInputStream stream = new PositionInputStream(input);
-                mHeader = RequestHeader.parse(stream);
-                if (mHeader == null) {Log.e(TAG, "Invalid header"); return;}
-                if (!mHeader.check(false)) {Log.e(TAG, "Invalid header"); return;}
+                res = new Request();
+                res.mHeader = RequestHeader.parse(input);
+                if (res.mHeader == null) {Log.e(TAG, "Invalid header"); return null;}
+                if (!res.mHeader.check(false)) {Log.e(TAG, "Invalid header"); return null;}
 
-                mPackage = new byte[available - stream.getPosition()];
-                stream.read(mPackage, 0, mPackage.length);
+                res.mPackage = new byte[input.remaining()];
+                input.get(res.mPackage, 0, res.mPackage.length);
 
 
-                mSuccess = true;
+                res.mSuccess = true;
 
 
 
@@ -47,6 +80,8 @@ public class Request {
                 Log.e(TAG, ex.toString());
             }
         }
+
+        return res;
     }
 
 

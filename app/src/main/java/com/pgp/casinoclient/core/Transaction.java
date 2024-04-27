@@ -41,8 +41,8 @@ public class Transaction {
 
         int senderId = b.getInt();
         int receiverId = b.getInt();
-        t.Sender = DataLoader.Singleton().GetPlayerById(senderId);
-        t.Receiver = DataLoader.Singleton().GetPlayerById(receiverId);
+        t.Sender = DataLoader.Singleton().GetCachedPlayerById(senderId);
+        t.Receiver = DataLoader.Singleton().GetCachedPlayerById(receiverId);
         t.Amount = b.getInt();
         t.SenderPaid = b.getInt();
         t.Type = TransactionType.Get((int)b.get());
